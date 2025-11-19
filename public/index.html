@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kay & Elssy — Private Call</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="landing-page">
+  <!-- Floating hearts background -->
+  <div class="floating-hearts" id="floatingHearts"></div>
+
+  <!-- Subtle heart decoration in corner -->
+  <div class="corner-heart">💜</div>
+
+  <!-- Main landing container -->
+  <div class="landing-container">
+    <!-- Title section -->
+    <div class="landing-header">
+      <h1 class="landing-title">Kay & Elssy</h1>
+      <p class="landing-subtitle">Private Call</p>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="landing-buttons">
+      <button class="landing-btn primary-btn" onclick="startCall()">
+        <span class="btn-icon">📞</span>
+        <span class="btn-text">Start Call</span>
+      </button>
+      
+      <button class="landing-btn secondary-btn" onclick="joinCall()">
+        <span class="btn-icon">🎥</span>
+        <span class="btn-text">Join Call</span>
+      </button>
+    </div>
+
+    <!-- Info text -->
+    <p class="landing-info">A private space for our conversations</p>
+  </div>
+
+  <!-- Background gradient animation -->
+  <div class="gradient-bg"></div>
+
+  <script>
+    // Create floating hearts animation
+    function createFloatingHearts() {
+      const container = document.getElementById('floatingHearts');
+      const heartSymbols = ['💜', '💕', '💗', '💖'];
+      
+      setInterval(() => {
+        const heart = document.createElement('div');
+        heart.className = 'floating-heart';
+        heart.textContent = heartSymbols[Math.floor(Math.random() * heartSymbols.length)];
+        heart.style.left = Math.random() * 100 + '%';
+        heart.style.animationDuration = (Math.random() * 4 + 6) + 's';
+        heart.style.animationDelay = Math.random() * 2 + 's';
+        container.appendChild(heart);
+        
+        setTimeout(() => heart.remove(), 10000);
+      }, 3000);
+    }
+
+    // Navigate to call page with role parameter
+    function startCall() {
+      window.location.href = 'call.html?role=caller';
+    }
+
+    function joinCall() {
+      window.location.href = 'call.html?role=receiver';
+    }
+
+    // Initialize animations
+    window.addEventListener('DOMContentLoaded', () => {
+      createFloatingHearts();
+    });
+  </script>
+</body>
+</html>

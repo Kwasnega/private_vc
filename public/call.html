@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Call in Progress — Kay & Elssy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="call-page">
+  <!-- Floating hearts background -->
+  <div class="floating-hearts" id="floatingHearts"></div>
+
+  <!-- Subtle heart decoration -->
+  <div class="corner-heart">💜</div>
+
+  <!-- Connection status -->
+  <div class="connection-status" id="connectionStatus">
+    <span class="status-dot"></span>
+    <span class="status-text">Connecting...</span>
+  </div>
+
+  <!-- Video container -->
+  <div class="video-container">
+    <!-- Remote video (Elssy's or Kay's depending on role) -->
+    <div class="video-wrapper remote-video-wrapper">
+      <video id="remoteVideo" autoplay playsinline></video>
+      <div class="video-label" id="remoteLabel">Waiting...</div>
+      <div class="video-placeholder" id="remotePlaceholder">
+        <div class="placeholder-icon">👤</div>
+        <div class="placeholder-text">Waiting for connection...</div>
+      </div>
+    </div>
+
+    <!-- Local video (your camera) -->
+    <div class="video-wrapper local-video-wrapper">
+      <video id="localVideo" autoplay muted playsinline></video>
+      <div class="video-label" id="localLabel">You</div>
+    </div>
+  </div>
+
+  <!-- Call controls -->
+  <div class="controls-container">
+    <button class="control-btn" id="toggleMic" title="Toggle Microphone">
+      <span class="control-icon">🎤</span>
+    </button>
+
+    <button class="control-btn" id="toggleCamera" title="Toggle Camera">
+      <span class="control-icon">📹</span>
+    </button>
+
+    <button class="control-btn" id="switchCamera" title="Switch Camera">
+      <span class="control-icon">🔄</span>
+    </button>
+
+    <button class="control-btn end-call-btn" id="endCall" title="End Call">
+      <span class="control-icon">📵</span>
+    </button>
+  </div>
+
+  <!-- Background gradient -->
+  <div class="gradient-bg"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>

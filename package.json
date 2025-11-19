@@ -1,0 +1,20 @@
+{
+  "name": "kay-elssy-private-call",
+  "version": "1.0.0",
+  "description": "Private video calling website for Kay & Elssy",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["webrtc", "video-call", "private"],
+  "author": "Kay",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
