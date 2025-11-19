@@ -19,6 +19,9 @@ let isMicEnabled = true;
 let isCameraEnabled = true;
 let currentCameraIndex = 0;
 let videoDevices = [];
+let hasPlayedJoinSound = false;
+let pulseTimeout = null;
+let isPulsing = false;
 
 // ===== DOM ELEMENTS =====
 const localVideo = document.getElementById('localVideo');
@@ -30,7 +33,11 @@ const remotePlaceholder = document.getElementById('remotePlaceholder');
 const toggleMicBtn = document.getElementById('toggleMic');
 const toggleCameraBtn = document.getElementById('toggleCamera');
 const switchCameraBtn = document.getElementById('switchCamera');
+const sendPulseBtn = document.getElementById('sendPulse');
 const endCallBtn = document.getElementById('endCall');
+const localAvatar = document.getElementById('localAvatar');
+const remoteAvatar = document.getElementById('remoteAvatar');
+const joinSound = document.getElementById('joinSound');
 
 // ===== INITIALIZATION =====
 async function init() {
@@ -40,10 +47,17 @@ async function init() {
   if (role === 'caller') {
     localLabel.textContent = 'Kay';
     remoteLabel.textContent = 'Elssy';
+    localAvatar.textContent = 'K';
+    remoteAvatar.textContent = 'E';
   } else {
     localLabel.textContent = 'Elssy';
     remoteLabel.textContent = 'Kay';
+    localAvatar.textContent = 'E';
+    remoteAvatar.textContent = 'K';
   }
+
+  // Create join sound using base64 encoded soft ding
+  joinSound.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 
   connectToSignalingServer();
   await getUserMedia();
@@ -157,6 +171,9 @@ async function handleSignalingMessage(message) {
     case 'ice-candidate':
       await handleIceCandidate(message.candidate);
       break;
+    case 'pulse':
+      receivePulse();
+      break;
   }
 }
 
@@ -240,6 +257,13 @@ function createPeerConnection() {
     remoteVideo.play().then(() => {
       console.log('✅ Remote video playing successfully');
       remotePlaceholder.classList.add('hidden');
+      
+      // Trigger heart burst animation and play join sound when remote video successfully connects
+      // Only trigger once when video track starts playing
+      if (event.track.kind === 'video') {
+        triggerHeartBurst();
+        playJoinSound();
+      }
     }).catch(error => {
       console.error('❌ Error playing remote video:', error);
     });
@@ -438,6 +462,7 @@ function toggleMicrophone() {
       isMicEnabled = audioTrack.enabled;
       toggleMicBtn.classList.toggle('active', !isMicEnabled);
       toggleMicBtn.querySelector('.control-icon').textContent = isMicEnabled ? '🎤' : '🔇';
+      showToast(isMicEnabled ? 'Mic on' : 'Mic muted');
     }
   }
 }
@@ -451,6 +476,17 @@ function toggleCamera() {
       isCameraEnabled = videoTrack.enabled;
       toggleCameraBtn.classList.toggle('active', !isCameraEnabled);
       toggleCameraBtn.querySelector('.control-icon').textContent = isCameraEnabled ? '📹' : '📷';
+      
+      // Toggle avatar visibility
+      if (isCameraEnabled) {
+        localVideo.style.display = 'block';
+        localAvatar.classList.remove('visible');
+        showToast('Camera on');
+      } else {
+        localVideo.style.display = 'none';
+        localAvatar.classList.add('visible');
+        showToast('Camera off');
+      }
     }
   }
 }
@@ -478,6 +514,7 @@ async function switchCamera() {
       const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
       if (sender) await sender.replaceTrack(newVideoTrack);
     }
+    showToast('Camera switched');
     console.log('Camera switched');
   } catch (error) {
     console.error('Error switching camera:', error);
@@ -500,12 +537,121 @@ function updateConnectionStatus(text, status = '') {
   if (status) connectionStatus.classList.add(status);
 }
 
+// ===== PLAY JOIN SOUND =====
+function playJoinSound() {
+  if (!hasPlayedJoinSound && joinSound) {
+    joinSound.volume = 0.3;
+    joinSound.play().then(() => {
+      console.log('🔔 Join sound played');
+      hasPlayedJoinSound = true;
+    }).catch(error => {
+      console.error('Error playing join sound:', error);
+    });
+  }
+}
+
+// ===== SHOW TOAST NOTIFICATION =====
+function showToast(message) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 2700);
+}
+
+// ===== SEND PULSE =====
+function sendPulse() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    sendMessage({ type: 'pulse' });
+    console.log('💜 Pulse sent to remote peer');
+  }
+}
+
+// ===== RECEIVE PULSE =====
+function receivePulse() {
+  const remoteWrapper = document.querySelector('.remote-video-wrapper');
+  if (!remoteWrapper) return;
+
+  let pulseOverlay = remoteWrapper.querySelector('.pulse-overlay');
+  if (!pulseOverlay) {
+    pulseOverlay = document.createElement('div');
+    pulseOverlay.className = 'pulse-overlay';
+    remoteWrapper.appendChild(pulseOverlay);
+  }
+
+  pulseOverlay.classList.remove('active');
+  void pulseOverlay.offsetWidth;
+  pulseOverlay.classList.add('active');
+
+  console.log('💜 Received pulse from remote peer');
+
+  setTimeout(() => {
+    pulseOverlay.classList.remove('active');
+  }, 800);
+}
+
 // ===== SETUP EVENT LISTENERS =====
 function setupEventListeners() {
   toggleMicBtn.addEventListener('click', toggleMicrophone);
   toggleCameraBtn.addEventListener('click', toggleCamera);
   switchCameraBtn.addEventListener('click', switchCamera);
   endCallBtn.addEventListener('click', endCall);
+
+  sendPulseBtn.addEventListener('mousedown', () => {
+    if (isPulsing) return;
+    pulseTimeout = setTimeout(() => {
+      isPulsing = true;
+      sendPulseBtn.classList.add('active');
+      sendPulse();
+      setTimeout(() => {
+        sendPulseBtn.classList.remove('active');
+        isPulsing = false;
+      }, 600);
+    }, 500);
+  });
+
+  sendPulseBtn.addEventListener('mouseup', () => {
+    if (pulseTimeout) {
+      clearTimeout(pulseTimeout);
+      pulseTimeout = null;
+    }
+  });
+
+  sendPulseBtn.addEventListener('mouseleave', () => {
+    if (pulseTimeout) {
+      clearTimeout(pulseTimeout);
+      pulseTimeout = null;
+    }
+  });
+
+  sendPulseBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (isPulsing) return;
+    pulseTimeout = setTimeout(() => {
+      isPulsing = true;
+      sendPulseBtn.classList.add('active');
+      sendPulse();
+      setTimeout(() => {
+        sendPulseBtn.classList.remove('active');
+        isPulsing = false;
+      }, 600);
+    }, 500);
+  });
+
+  sendPulseBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (pulseTimeout) {
+      clearTimeout(pulseTimeout);
+      pulseTimeout = null;
+    }
+  });
   
   // Mobile: tap video to toggle controls visibility
   let controlsVisible = true;
@@ -561,6 +707,54 @@ function setupEventListeners() {
     if (peerConnection) peerConnection.close();
     if (ws) ws.close();
   });
+}
+
+updateConnectionStatus = (function() {
+  const original = updateConnectionStatus;
+  return function(text, status) {
+    original(text, status);
+    if (status === 'connected') {
+      showToast('Connected');
+    }
+  };
+})();
+
+// ===== TRIGGER HEART BURST (ONE-TIME ON CONNECTION) =====
+function triggerHeartBurst() {
+  const container = document.getElementById('heartBurst');
+  if (!container) return;
+  
+  const heartCount = 8; // Generate 8 hearts
+  const hearts = [];
+  
+  console.log('💕 Triggering heart burst animation!');
+  
+  for (let i = 0; i < heartCount; i++) {
+    const heart = document.createElement('div');
+    heart.className = 'heart-burst';
+    heart.textContent = '♥';
+    
+    // Random horizontal position (25% to 75% of container width for better centering)
+    const leftPosition = 25 + Math.random() * 50;
+    heart.style.left = `${leftPosition}%`;
+    
+    // Random delay (0-300ms)
+    const delay = Math.random() * 300;
+    heart.style.animationDelay = `${delay}ms`;
+    
+    // Slight random variation in animation duration (1.2s - 1.6s)
+    const duration = 1.2 + Math.random() * 0.4;
+    heart.style.animationDuration = `${duration}s`;
+    
+    container.appendChild(heart);
+    hearts.push(heart);
+  }
+  
+  // Clear hearts after animation completes (max 1.6s animation + 300ms max delay + 100ms buffer)
+  setTimeout(() => {
+    hearts.forEach(heart => heart.remove());
+    console.log('💕 Heart burst animation completed and cleaned up');
+  }, 2000);
 }
 
 // ===== CREATE FLOATING HEARTS =====

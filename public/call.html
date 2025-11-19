@@ -14,6 +14,12 @@
   <!-- Subtle heart decoration -->
   <div class="corner-heart">💜</div>
 
+  <!-- Join sound (plays once when remote stream connects) -->
+  <audio id="joinSound" preload="auto"></audio>
+
+  <!-- Toast notification container -->
+  <div id="toastContainer"></div>
+
   <!-- Connection status -->
   <div class="connection-status" id="connectionStatus">
     <span class="status-dot"></span>
@@ -22,9 +28,13 @@
 
   <!-- Video container -->
   <div class="video-container">
+    <!-- Heart burst container (one-time animation on connection) -->
+    <div id="heartBurst"></div>
+    
     <!-- Remote video (Elssy's or Kay's depending on role) -->
     <div class="video-wrapper remote-video-wrapper">
       <video id="remoteVideo" autoplay playsinline></video>
+      <div class="avatar-circle" id="remoteAvatar">E</div>
       <div class="video-label" id="remoteLabel">Waiting...</div>
       <div class="video-placeholder" id="remotePlaceholder">
         <div class="placeholder-icon">👤</div>
@@ -35,6 +45,7 @@
     <!-- Local video (your camera) -->
     <div class="video-wrapper local-video-wrapper">
       <video id="localVideo" autoplay muted playsinline></video>
+      <div class="avatar-circle" id="localAvatar">K</div>
       <div class="video-label" id="localLabel">You</div>
     </div>
   </div>
@@ -51,6 +62,10 @@
 
     <button class="control-btn" id="switchCamera" title="Switch Camera">
       <span class="control-icon">🔄</span>
+    </button>
+
+    <button class="control-btn pulse-btn" id="sendPulse" title="Send Pulse (Long Press)">
+      <span class="control-icon">💜</span>
     </button>
 
     <button class="control-btn end-call-btn" id="endCall" title="End Call">
