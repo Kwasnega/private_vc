@@ -492,6 +492,56 @@ function setupEventListeners() {
   toggleCameraBtn.addEventListener('click', toggleCamera);
   switchCameraBtn.addEventListener('click', switchCamera);
   endCallBtn.addEventListener('click', endCall);
+  
+  // Mobile: tap video to toggle controls visibility
+  let controlsVisible = true;
+  let hideControlsTimeout;
+  
+  const isMobile = window.innerWidth <= 768;
+  
+  if (isMobile) {
+    const videoContainer = document.querySelector('.video-container');
+    const controlsContainer = document.querySelector('.controls-container');
+    const connectionStatus = document.getElementById('connectionStatus');
+    
+    // Auto-hide controls after 3 seconds of inactivity
+    const autoHideControls = () => {
+      clearTimeout(hideControlsTimeout);
+      hideControlsTimeout = setTimeout(() => {
+        if (controlsVisible) {
+          controlsContainer.classList.add('hidden');
+          connectionStatus.style.opacity = '0';
+          controlsVisible = false;
+        }
+      }, 3000);
+    };
+    
+    // Tap anywhere on video to toggle controls
+    videoContainer.addEventListener('click', (e) => {
+      // Don't toggle if clicking on controls themselves
+      if (e.target.closest('.controls-container')) return;
+      
+      controlsVisible = !controlsVisible;
+      
+      if (controlsVisible) {
+        controlsContainer.classList.remove('hidden');
+        connectionStatus.style.opacity = '1';
+        autoHideControls();
+      } else {
+        controlsContainer.classList.add('hidden');
+        connectionStatus.style.opacity = '0';
+      }
+    });
+    
+    // Start auto-hide timer
+    autoHideControls();
+    
+    // Show controls when user interacts with them
+    controlsContainer.addEventListener('click', () => {
+      autoHideControls();
+    });
+  }
+  
   window.addEventListener('beforeunload', () => {
     if (localStream) localStream.getTracks().forEach(track => track.stop());
     if (peerConnection) peerConnection.close();
