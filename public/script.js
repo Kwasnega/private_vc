@@ -108,14 +108,27 @@ async function handleSignalingMessage(message) {
   switch (message.type) {
     case 'connection-status':
       console.log(`👥 Client count: ${message.clientCount}`);
+      
+      // Both peers should prepare peer connection
+      if (message.clientCount === 2 && localStream && !peerConnection) {
+        console.log('🔗 Both peers connected, creating peer connection...');
+        createPeerConnection();
+      }
+      
       if (message.clientCount === 2 && role === 'caller') {
         console.log('📞 Both peers connected, caller creating offer...');
-        setTimeout(() => createOffer(), 500);
+        setTimeout(() => createOffer(), 1000);
       }
       break;
     case 'peer-joined':
       console.log('👥 Peer joined!');
       updateConnectionStatus('Peer joined, connecting...');
+      
+      // Both peers should create connection immediately
+      if (!peerConnection && localStream) {
+        console.log('🔗 Creating peer connection for both peers...');
+        createPeerConnection();
+      }
       
       // Wait a bit to ensure both peers are ready
       setTimeout(async () => {
@@ -124,7 +137,6 @@ async function handleSignalingMessage(message) {
           await createOffer();
         } else {
           console.log('📱 I am the receiver, waiting for offer...');
-          // Receiver will create peer connection when offer arrives
         }
       }, 500);
       break;
@@ -316,19 +328,21 @@ async function handleOffer(offer) {
     if (!localStream) {
       console.log('⏳ Waiting for local stream...');
       let attempts = 0;
-      while (!localStream && attempts < 50) {
+      while (!localStream && attempts < 100) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
       }
       
       if (!localStream) {
-        console.error('❌ Local stream still not available after waiting');
+        console.error('❌ Local stream still not available after waiting 10 seconds');
         return;
       }
       console.log('✅ Local stream is now ready');
     }
     
+    // Ensure peer connection exists
     if (!peerConnection) {
+      console.log('🔗 Creating peer connection for receiver...');
       createPeerConnection();
     }
     
