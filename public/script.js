@@ -79,7 +79,14 @@ function connectToSignalingServer() {
 
   ws.onmessage = async (event) => {
     console.log('📨 Received WebSocket message');
-    const message = JSON.parse(event.data);
+    
+    // Handle both text and Blob data
+    let data = event.data;
+    if (data instanceof Blob) {
+      data = await data.text();
+    }
+    
+    const message = JSON.parse(data);
     await handleSignalingMessage(message);
   };
 
