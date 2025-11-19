@@ -312,9 +312,20 @@ async function handleOffer(offer) {
   try {
     console.log('📥 Received offer from peer');
     
+    // Wait for local stream if not ready yet
     if (!localStream) {
-      console.error('❌ No local stream available for answer');
-      return;
+      console.log('⏳ Waiting for local stream...');
+      let attempts = 0;
+      while (!localStream && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
+      if (!localStream) {
+        console.error('❌ Local stream still not available after waiting');
+        return;
+      }
+      console.log('✅ Local stream is now ready');
     }
     
     if (!peerConnection) {
@@ -323,6 +334,9 @@ async function handleOffer(offer) {
     
     console.log('📥 Setting remote description (offer)');
     await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+    
+    // Process any pending ICE candidates
+    await processPendingIceCandidates();
     
     console.log('📞 Creating answer...');
     const answer = await peerConnection.createAnswer();
@@ -351,17 +365,25 @@ async function handleAnswer(answer) {
     
     console.log('📥 Setting remote description (answer)');
     await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    
+    // Process any pending ICE candidates
+    await processPendingIceCandidates();
+    
     console.log('✅ Answer processed successfully');
   } catch (error) {
     console.error('❌ Error handling answer:', error);
   }
 }
 
+// Store pending ICE candidates
+let pendingIceCandidates = [];
+
 // ===== HANDLE ICE CANDIDATE =====
 async function handleIceCandidate(candidate) {
   try {
     if (!peerConnection) {
-      console.warn('⚠️ No peer connection, cannot add ICE candidate');
+      console.warn('⚠️ No peer connection yet, queuing ICE candidate');
+      pendingIceCandidates.push(candidate);
       return;
     }
     
@@ -369,12 +391,27 @@ async function handleIceCandidate(candidate) {
       await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
       console.log('✅ ICE candidate added');
     } else {
-      console.warn('⚠️ Waiting for remote description before adding ICE candidate');
-      // Queue the candidate to be added later
-      setTimeout(() => handleIceCandidate(candidate), 100);
+      console.warn('⚠️ No remote description yet, queuing ICE candidate');
+      pendingIceCandidates.push(candidate);
     }
   } catch (error) {
     console.error('❌ Error adding ICE candidate:', error);
+  }
+}
+
+// ===== PROCESS PENDING ICE CANDIDATES =====
+async function processPendingIceCandidates() {
+  if (pendingIceCandidates.length > 0 && peerConnection && peerConnection.remoteDescription) {
+    console.log(`📦 Processing ${pendingIceCandidates.length} pending ICE candidates`);
+    for (const candidate of pendingIceCandidates) {
+      try {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log('✅ Queued ICE candidate added');
+      } catch (error) {
+        console.error('❌ Error adding queued ICE candidate:', error);
+      }
+    }
+    pendingIceCandidates = [];
   }
 }
 
