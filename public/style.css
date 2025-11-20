@@ -413,6 +413,27 @@ video {
   background: #000;
 }
 
+/* Hide all video controls including pause button */
+video::-webkit-media-controls {
+  display: none !important;
+}
+
+video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+video::-webkit-media-controls-panel {
+  display: none !important;
+}
+
+video::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
 #remoteVideo {
   background: #000;
 }
@@ -863,4 +884,630 @@ video {
 .control-btn,
 .landing-btn {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== DRAWING CANVAS ===== */
+#drawCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 25;
+  pointer-events: none;
+  cursor: crosshair;
+}
+
+#drawCanvas.active {
+  pointer-events: all;
+}
+
+/* ===== REACTION PARTICLES ===== */
+#reactionParticles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 30;
+  overflow: hidden;
+}
+
+.reaction-particle {
+  position: absolute;
+  font-size: 32px;
+  opacity: 0;
+  animation: floatReaction 2s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes floatReaction {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5);
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-150px) scale(1.2);
+  }
+}
+
+/* ===== MODAL STYLES ===== */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: rgba(26, 26, 46, 0.95);
+  border-radius: 20px;
+  padding: 0;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 50px rgba(123, 44, 191, 0.5);
+  border: 2px solid rgba(157, 78, 221, 0.3);
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  color: white;
+  font-size: 24px;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(80vh - 80px);
+}
+
+/* ===== GAMES MENU ===== */
+.games-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.game-btn {
+  padding: 16px;
+  background: rgba(123, 44, 191, 0.3);
+  border: 2px solid rgba(157, 78, 221, 0.5);
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.game-btn:hover {
+  background: rgba(123, 44, 191, 0.5);
+  transform: translateY(-2px);
+}
+
+#gameArea {
+  margin-top: 20px;
+}
+
+.game-choice-btn {
+  padding: 20px;
+  margin: 10px;
+  font-size: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.game-choice-btn:hover {
+  background: rgba(123, 44, 191, 0.3);
+  transform: scale(1.1);
+}
+
+.game-result {
+  text-align: center;
+  color: white;
+  font-size: 24px;
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(123, 44, 191, 0.3);
+  border-radius: 12px;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.emoji-btn {
+  padding: 20px;
+  font-size: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.emoji-btn:hover {
+  background: rgba(123, 44, 191, 0.3);
+  transform: scale(1.05);
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.memory-card {
+  aspect-ratio: 1;
+  background: rgba(123, 44, 191, 0.3);
+  border: 2px solid rgba(157, 78, 221, 0.5);
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  transition: all 0.3s;
+}
+
+.memory-card:hover {
+  transform: scale(1.05);
+}
+
+.memory-card.flipped {
+  background: rgba(157, 78, 221, 0.6);
+}
+
+.memory-card.matched {
+  background: rgba(6, 255, 165, 0.3);
+  border-color: rgba(6, 255, 165, 0.5);
+}
+
+/* ===== REACTIONS MENU ===== */
+.reactions-menu {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 12px;
+  border-radius: 50px;
+  display: flex;
+  gap: 8px;
+  z-index: 150;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.reaction-option {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reaction-option:hover {
+  background: rgba(123, 44, 191, 0.5);
+  transform: scale(1.1);
+}
+
+/* ===== WATCH PARTY PANEL ===== */
+.watch-party-panel,
+.notes-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(26, 26, 46, 0.95);
+  border-radius: 20px;
+  padding: 0;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 10px 50px rgba(123, 44, 191, 0.5);
+  border: 2px solid rgba(157, 78, 221, 0.3);
+  z-index: 180;
+}
+
+.panel-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h3 {
+  color: white;
+  font-size: 20px;
+  margin: 0;
+}
+
+.panel-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+.panel-body {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(80vh - 80px);
+}
+
+#watchUrl,
+#noteInput {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+#watchUrl::placeholder,
+#noteInput::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.panel-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.panel-controls button,
+.notes-input-container button,
+.notes-actions button {
+  padding: 10px 20px;
+  background: rgba(123, 44, 191, 0.5);
+  border: 2px solid rgba(157, 78, 221, 0.5);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.panel-controls button:hover,
+.notes-input-container button:hover,
+.notes-actions button:hover {
+  background: rgba(123, 44, 191, 0.7);
+}
+
+.panel-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== NOTES PANEL ===== */
+.notes-input-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.notes-input-container input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+#notesList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+#notesList li {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#notesList li button {
+  background: rgba(255, 0, 110, 0.5);
+  border: none;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+#notesList li button:hover {
+  background: rgba(255, 0, 110, 0.8);
+}
+
+.notes-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== COMPLIMENT BANNER ===== */
+.compliment-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(123, 44, 191, 0.9);
+  backdrop-filter: blur(20px);
+  padding: 24px 48px;
+  border-radius: 16px;
+  color: white;
+  font-size: 24px;
+  font-weight: 500;
+  text-align: center;
+  z-index: 250;
+  box-shadow: 0 10px 40px rgba(123, 44, 191, 0.6);
+  border: 2px solid rgba(157, 78, 221, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.compliment-banner.active {
+  opacity: 1;
+  animation: slideUpFade 3.5s ease-out forwards;
+}
+
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  90% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+}
+
+/* ===== MOOD LIGHTING BACKGROUND ===== */
+.gradient-bg.mood-active {
+  animation: moodPulse 0.5s ease-in-out;
+}
+
+@keyframes moodPulse {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.3);
+  }
+}
+
+/* ===== PORTAL EFFECT ===== */
+.portal-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+
+.portal-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  border: 4px solid transparent;
+  border-radius: 50%;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #7b2cbf, #9d4edd, #06ffa5, #7b2cbf) border-box;
+  opacity: 0;
+  animation: portalRingExpand 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  box-shadow: 
+    0 0 30px rgba(123, 44, 191, 0.8),
+    0 0 60px rgba(157, 78, 221, 0.6),
+    inset 0 0 30px rgba(123, 44, 191, 0.4);
+}
+
+@keyframes portalRingExpand {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.3) rotate(360deg);
+  }
+}
+
+.portal-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #7b2cbf, #9d4edd);
+  border-radius: 50%;
+  opacity: 0;
+  animation: portalParticleFloat 1.2s ease-out forwards;
+  box-shadow: 0 0 10px rgba(123, 44, 191, 0.8);
+}
+
+@keyframes portalParticleFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5) translateY(-40px);
+  }
+}
+
+/* Add glow effect to video wrapper during portal */
+.video-wrapper:has(.portal-effect) {
+  animation: portalGlow 1.4s ease-out;
+}
+
+@keyframes portalGlow {
+  0%, 100% {
+    box-shadow: 
+      0 0 40px rgba(123, 44, 191, 0.5),
+      0 0 80px rgba(157, 78, 221, 0.3),
+      inset 0 0 60px rgba(123, 44, 191, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 80px rgba(123, 44, 191, 1),
+      0 0 120px rgba(157, 78, 221, 0.8),
+      0 0 160px rgba(6, 255, 165, 0.6),
+      inset 0 0 100px rgba(123, 44, 191, 0.4);
+  }
+}
+
+/* Mobile adjustments for new features */
+@media (max-width: 768px) {
+  .modal-content,
+  .watch-party-panel,
+  .notes-panel {
+    width: 95%;
+    max-height: 70vh;
+  }
+
+  .reactions-menu {
+    bottom: 100px;
+  }
+
+  .reaction-option {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+
+  .compliment-banner {
+    font-size: 18px;
+    padding: 20px 32px;
+    max-width: 80%;
+  }
+
+  .controls-container {
+    flex-wrap: wrap;
+    max-width: 90%;
+  }
+  
+  .portal-ring {
+    width: 90%;
+    height: 90%;
+    border-width: 3px;
+  }
+  
+  .portal-particle {
+    width: 6px;
+    height: 6px;
+  }
 }

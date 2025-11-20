@@ -23,6 +23,58 @@ let hasPlayedJoinSound = false;
 let pulseTimeout = null;
 let isPulsing = false;
 
+// Drawing variables
+let isDrawing = false;
+let drawingEnabled = false;
+let drawCanvas = null;
+let drawCtx = null;
+let lastX = 0;
+let lastY = 0;
+
+// Mood lighting variables
+let moodLightingEnabled = false;
+let audioContext = null;
+let analyser = null;
+let dataArray = null;
+
+// Game variables
+let currentGame = null;
+let gameState = {};
+
+// Watch party variables
+let partyPlayer = null;
+let isPartyLeader = false;
+
+// Notes variables
+let notes = [];
+let noteIdCounter = 0;
+
+// Compliments
+let complimentsEnabled = true;
+let compliments = [
+  "You look absolutely stunning today! 💜",
+  "Your smile could light up the whole room! ✨",
+  "You're the best thing that's happened to me! ❤️",
+  "Every moment with you is magical! 🌟",
+  "You make my heart skip a beat! 💕",
+  "You're more beautiful than ever! 🌹",
+  "I'm so lucky to have you! 🍀",
+  "You're my favorite person in the world! 🌍"
+];
+
+// Portal effect variables
+let portalEnabled = false;
+let motionDetectionEnabled = false;
+let lastMotionTime = 0;
+let remoteMotionTime = 0;
+let lastPortalTime = 0;
+let motionCanvas = null;
+let motionCtx = null;
+let previousFrame = null;
+let motionDetectionInterval = null;
+const PORTAL_COOLDOWN = 45000; // 45 seconds
+const WAVE_SYNC_WINDOW = 1200; // 1.2 seconds
+
 // ===== DOM ELEMENTS =====
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
@@ -38,6 +90,16 @@ const endCallBtn = document.getElementById('endCall');
 const localAvatar = document.getElementById('localAvatar');
 const remoteAvatar = document.getElementById('remoteAvatar');
 const joinSound = document.getElementById('joinSound');
+
+// New feature elements
+const toggleDrawBtn = document.getElementById('toggleDraw');
+const clearDrawBtn = document.getElementById('clearDraw');
+const toggleMoodLightingBtn = document.getElementById('toggleMoodLighting');
+const gamesBtn = document.getElementById('gamesBtn');
+const reactionsBtn = document.getElementById('reactionsBtn');
+const watchPartyBtn = document.getElementById('watchPartyBtn');
+const notesBtn = document.getElementById('notesBtn');
+const togglePortalBtn = document.getElementById('togglePortal');
 
 // ===== INITIALIZATION =====
 async function init() {
@@ -63,6 +125,14 @@ async function init() {
   await getUserMedia();
   setupEventListeners();
   await getVideoDevices();
+  initDrawingCanvas();
+  initMotionDetection();
+  loadNotes();
+  
+  // Show compliment on join
+  if (complimentsEnabled) {
+    setTimeout(() => showCompliment(), 2000);
+  }
 }
 
 // ===== SEND MESSAGE SAFELY =====
@@ -173,6 +243,33 @@ async function handleSignalingMessage(message) {
       break;
     case 'pulse':
       receivePulse();
+      break;
+    case 'draw':
+      handleRemoteDraw(message.data);
+      break;
+    case 'clearDraw':
+      clearDrawingCanvas();
+      break;
+    case 'reaction':
+      showReactionParticles(message.reaction);
+      break;
+    case 'game':
+      handleGameMessage(message);
+      break;
+    case 'partyLoad':
+      handlePartyLoad(message);
+      break;
+    case 'partyControl':
+      handlePartyControl(message);
+      break;
+    case 'partyReact':
+      showPartyReaction(message.react);
+      break;
+    case 'note':
+      handleNoteMessage(message);
+      break;
+    case 'portalSync':
+      handlePortalSync(message);
       break;
   }
 }
@@ -597,12 +694,752 @@ function receivePulse() {
   }, 800);
 }
 
+// ===== DRAWING CANVAS FUNCTIONS =====
+function initDrawingCanvas() {
+  drawCanvas = document.getElementById('drawCanvas');
+  drawCtx = drawCanvas.getContext('2d');
+  
+  // Set canvas size
+  drawCanvas.width = window.innerWidth;
+  drawCanvas.height = window.innerHeight;
+  
+  drawCtx.strokeStyle = '#ff6b9d';
+  drawCtx.lineWidth = 3;
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+  
+  // Resize canvas on window resize
+  window.addEventListener('resize', () => {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = drawCanvas.width;
+    tempCanvas.height = drawCanvas.height;
+    tempCanvas.getContext('2d').drawImage(drawCanvas, 0, 0);
+    
+    drawCanvas.width = window.innerWidth;
+    drawCanvas.height = window.innerHeight;
+    drawCtx.drawImage(tempCanvas, 0, 0);
+  });
+  
+  // Drawing event listeners
+  drawCanvas.addEventListener('mousedown', startDrawing);
+  drawCanvas.addEventListener('mousemove', draw);
+  drawCanvas.addEventListener('mouseup', stopDrawing);
+  drawCanvas.addEventListener('mouseout', stopDrawing);
+  
+  drawCanvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousedown', {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    drawCanvas.dispatchEvent(mouseEvent);
+  });
+  
+  drawCanvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const mouseEvent = new MouseEvent('mousemove', {
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    drawCanvas.dispatchEvent(mouseEvent);
+  });
+  
+  drawCanvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    const mouseEvent = new MouseEvent('mouseup', {});
+    drawCanvas.dispatchEvent(mouseEvent);
+  });
+}
+
+function toggleDrawing() {
+  drawingEnabled = !drawingEnabled;
+  drawCanvas.classList.toggle('active', drawingEnabled);
+  toggleDrawBtn.classList.toggle('active', drawingEnabled);
+  clearDrawBtn.style.display = drawingEnabled ? 'flex' : 'none';
+  showToast(drawingEnabled ? 'Drawing enabled' : 'Drawing disabled');
+}
+
+function startDrawing(e) {
+  if (!drawingEnabled) return;
+  isDrawing = true;
+  [lastX, lastY] = [e.clientX, e.clientY];
+}
+
+function draw(e) {
+  if (!isDrawing || !drawingEnabled) return;
+  
+  drawCtx.beginPath();
+  drawCtx.moveTo(lastX, lastY);
+  drawCtx.lineTo(e.clientX, e.clientY);
+  drawCtx.stroke();
+  
+  // Send draw data to peer
+  sendMessage({
+    type: 'draw',
+    data: {
+      x1: lastX,
+      y1: lastY,
+      x2: e.clientX,
+      y2: e.clientY,
+      color: drawCtx.strokeStyle,
+      width: drawCtx.lineWidth
+    }
+  });
+  
+  [lastX, lastY] = [e.clientX, e.clientY];
+}
+
+function stopDrawing() {
+  isDrawing = false;
+}
+
+function handleRemoteDraw(data) {
+  drawCtx.strokeStyle = data.color;
+  drawCtx.lineWidth = data.width;
+  drawCtx.beginPath();
+  drawCtx.moveTo(data.x1, data.y1);
+  drawCtx.lineTo(data.x2, data.y2);
+  drawCtx.stroke();
+}
+
+function clearDrawingCanvas() {
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+}
+
+function clearDrawing() {
+  clearDrawingCanvas();
+  sendMessage({ type: 'clearDraw' });
+  showToast('Drawing cleared');
+}
+
+// ===== MOOD LIGHTING FUNCTIONS =====
+function toggleMoodLighting() {
+  moodLightingEnabled = !moodLightingEnabled;
+  toggleMoodLightingBtn.classList.toggle('active', moodLightingEnabled);
+  
+  if (moodLightingEnabled) {
+    initMoodLighting();
+    showToast('Mood lighting enabled');
+  } else {
+    showToast('Mood lighting disabled');
+  }
+}
+
+function initMoodLighting() {
+  if (!audioContext && localStream) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(localStream);
+    source.connect(analyser);
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+    
+    updateMoodLighting();
+  }
+}
+
+function updateMoodLighting() {
+  if (!moodLightingEnabled || !analyser) return;
+  
+  analyser.getByteFrequencyData(dataArray);
+  const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+  
+  const gradientBg = document.querySelector('.gradient-bg');
+  if (average > 50) {
+    gradientBg.classList.add('mood-active');
+    setTimeout(() => gradientBg.classList.remove('mood-active'), 500);
+  }
+  
+  requestAnimationFrame(updateMoodLighting);
+}
+
+// ===== GAMES FUNCTIONS =====
+function openGamesModal() {
+  document.getElementById('gamesModal').classList.add('active');
+}
+
+function closeGamesModal() {
+  document.getElementById('gamesModal').classList.remove('active');
+  document.getElementById('gameArea').style.display = 'none';
+  document.querySelector('.games-menu').style.display = 'flex';
+  currentGame = null;
+}
+
+function startGame(gameType) {
+  currentGame = gameType;
+  document.querySelector('.games-menu').style.display = 'none';
+  const gameArea = document.getElementById('gameArea');
+  gameArea.style.display = 'block';
+  gameArea.innerHTML = '';
+  
+  switch(gameType) {
+    case 'rps':
+      initRockPaperScissors(gameArea);
+      break;
+    case 'emoji':
+      initEmojiRace(gameArea);
+      break;
+    case 'memory':
+      initMemoryFlip(gameArea);
+      break;
+  }
+}
+
+function initRockPaperScissors(container) {
+  container.innerHTML = `
+    <h3 style="color: white; text-align: center;">Choose your move!</h3>
+    <div style="display: flex; justify-content: center; gap: 10px;">
+      <button class="game-choice-btn" data-choice="rock">🪨</button>
+      <button class="game-choice-btn" data-choice="paper">📄</button>
+      <button class="game-choice-btn" data-choice="scissors">✂️</button>
+    </div>
+    <div id="rpsResult"></div>
+  `;
+  
+  container.querySelectorAll('.game-choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const choice = btn.dataset.choice;
+      sendMessage({ type: 'game', game: 'rps', action: 'choice', choice });
+      gameState.myChoice = choice;
+      checkRPSResult();
+    });
+  });
+}
+
+function initEmojiRace(container) {
+  const emojis = ['😀', '😍', '🎉', '🌟', '❤️', '🔥', '⭐', '✨', '💜'];
+  const targetEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+  gameState.targetEmoji = targetEmoji;
+  
+  container.innerHTML = `
+    <h3 style="color: white; text-align: center;">Click: ${targetEmoji}</h3>
+    <div class="emoji-grid" id="emojiGrid"></div>
+    <div id="emojiResult"></div>
+  `;
+  
+  const grid = container.querySelector('#emojiGrid');
+  emojis.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.className = 'emoji-btn';
+    btn.textContent = emoji;
+    btn.addEventListener('click', () => {
+      if (emoji === targetEmoji) {
+        sendMessage({ type: 'game', game: 'emoji', action: 'win' });
+        showGameResult('You won! 🎉');
+      }
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function initMemoryFlip(container) {
+  const symbols = ['❤️', '⭐', '🌟', '💜', '✨', '🎉', '🔥', '💕'];
+  const cards = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
+  gameState.memoryCards = cards;
+  gameState.flipped = [];
+  gameState.matched = [];
+  
+  container.innerHTML = `
+    <h3 style="color: white; text-align: center;">Memory Flip</h3>
+    <div class="memory-grid" id="memoryGrid"></div>
+    <div id="memoryResult"></div>
+  `;
+  
+  const grid = container.querySelector('#memoryGrid');
+  cards.forEach((symbol, index) => {
+    const card = document.createElement('div');
+    card.className = 'memory-card';
+    card.dataset.index = index;
+    card.dataset.symbol = symbol;
+    card.textContent = '?';
+    card.addEventListener('click', () => flipMemoryCard(card, index));
+    grid.appendChild(card);
+  });
+}
+
+function flipMemoryCard(card, index) {
+  if (gameState.flipped.length >= 2 || card.classList.contains('flipped')) return;
+  
+  card.classList.add('flipped');
+  card.textContent = card.dataset.symbol;
+  gameState.flipped.push({ card, index, symbol: card.dataset.symbol });
+  
+  sendMessage({ type: 'game', game: 'memory', action: 'flip', index });
+  
+  if (gameState.flipped.length === 2) {
+    setTimeout(() => {
+      if (gameState.flipped[0].symbol === gameState.flipped[1].symbol) {
+        gameState.flipped.forEach(f => f.card.classList.add('matched'));
+        gameState.matched.push(...gameState.flipped);
+        gameState.flipped = [];
+        
+        if (gameState.matched.length === gameState.memoryCards.length) {
+          showGameResult('All matched! 🎉');
+        }
+      } else {
+        gameState.flipped.forEach(f => {
+          f.card.classList.remove('flipped');
+          f.card.textContent = '?';
+        });
+        gameState.flipped = [];
+      }
+    }, 1000);
+  }
+}
+
+function handleGameMessage(message) {
+  if (message.game === 'rps' && message.action === 'choice') {
+    gameState.theirChoice = message.choice;
+    checkRPSResult();
+  } else if (message.game === 'emoji' && message.action === 'win') {
+    showGameResult('They won!');
+  } else if (message.game === 'memory' && message.action === 'flip') {
+    const card = document.querySelector(`[data-index="${message.index}"]`);
+    if (card && !card.classList.contains('flipped')) {
+      card.classList.add('flipped');
+      card.textContent = card.dataset.symbol;
+    }
+  }
+}
+
+function checkRPSResult() {
+  if (gameState.myChoice && gameState.theirChoice) {
+    const results = {
+      'rock-scissors': 'You won! 🎉',
+      'paper-rock': 'You won! 🎉',
+      'scissors-paper': 'You won! 🎉',
+      'scissors-rock': 'They won!',
+      'rock-paper': 'They won!',
+      'paper-scissors': 'They won!'
+    };
+    
+    const key = `${gameState.myChoice}-${gameState.theirChoice}`;
+    const result = results[key] || "It's a tie!";
+    showGameResult(result);
+    gameState = {};
+  }
+}
+
+function showGameResult(message) {
+  const resultDiv = document.querySelector('#rpsResult, #emojiResult, #memoryResult');
+  if (resultDiv) {
+    resultDiv.className = 'game-result';
+    resultDiv.textContent = message;
+    setTimeout(() => {
+      closeGamesModal();
+    }, 3000);
+  }
+}
+
+// ===== REACTIONS FUNCTIONS =====
+function toggleReactionsMenu() {
+  const menu = document.getElementById('reactionsMenu');
+  const isVisible = menu.style.display === 'flex';
+  menu.style.display = isVisible ? 'none' : 'flex';
+}
+
+function sendReaction(reaction) {
+  sendMessage({ type: 'reaction', reaction });
+  showReactionParticles(reaction, true);
+  document.getElementById('reactionsMenu').style.display = 'none';
+}
+
+function showReactionParticles(reaction, isLocal = false) {
+  const container = document.getElementById('reactionParticles');
+  const reactionEmojis = {
+    heart: '❤️',
+    star: '⭐',
+    sparkle: '✨',
+    clap: '👏'
+  };
+  
+  const emoji = reactionEmojis[reaction] || '❤️';
+  const targetVideo = isLocal ? document.querySelector('.local-video-wrapper') : document.querySelector('.remote-video-wrapper');
+  const rect = targetVideo.getBoundingClientRect();
+  
+  for (let i = 0; i < 8; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'reaction-particle';
+    particle.textContent = emoji;
+    particle.style.left = (rect.left + Math.random() * rect.width) + 'px';
+    particle.style.top = (rect.top + rect.height / 2) + 'px';
+    particle.style.animationDelay = (Math.random() * 0.3) + 's';
+    container.appendChild(particle);
+    
+    setTimeout(() => particle.remove(), 2000);
+  }
+}
+
+// ===== WATCH PARTY FUNCTIONS =====
+function toggleWatchParty() {
+  const panel = document.getElementById('watchPartyPanel');
+  const isVisible = panel.style.display === 'block';
+  panel.style.display = isVisible ? 'none' : 'block';
+  
+  if (!isVisible) {
+    isPartyLeader = role === 'caller';
+  }
+}
+
+function loadPartyVideo() {
+  const url = document.getElementById('watchUrl').value.trim();
+  if (!url) return;
+  
+  partyPlayer = document.getElementById('partyPlayer');
+  const playPauseBtn = document.getElementById('playPauseVideo');
+  
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    showToast('YouTube support coming soon! Use MP4 URLs for now.');
+    return;
+  }
+  
+  partyPlayer.src = url;
+  partyPlayer.style.display = 'block';
+  playPauseBtn.disabled = false;
+  
+  sendMessage({ type: 'partyLoad', url, duration: 0 });
+  showToast('Video loaded');
+}
+
+function togglePartyPlayPause() {
+  if (!partyPlayer) return;
+  
+  if (partyPlayer.paused) {
+    partyPlayer.play();
+    sendMessage({ type: 'partyControl', action: 'play', time: partyPlayer.currentTime });
+    document.getElementById('playPauseVideo').textContent = 'Pause';
+  } else {
+    partyPlayer.pause();
+    sendMessage({ type: 'partyControl', action: 'pause', time: partyPlayer.currentTime });
+    document.getElementById('playPauseVideo').textContent = 'Play';
+  }
+}
+
+function handlePartyLoad(message) {
+  partyPlayer = document.getElementById('partyPlayer');
+  partyPlayer.src = message.url;
+  partyPlayer.style.display = 'block';
+  document.getElementById('playPauseVideo').disabled = false;
+  showToast('Video loaded by peer');
+}
+
+function handlePartyControl(message) {
+  if (!partyPlayer) return;
+  
+  if (message.action === 'play') {
+    partyPlayer.currentTime = message.time;
+    partyPlayer.play();
+    document.getElementById('playPauseVideo').textContent = 'Pause';
+  } else if (message.action === 'pause') {
+    partyPlayer.pause();
+    document.getElementById('playPauseVideo').textContent = 'Play';
+  } else if (message.action === 'seek') {
+    partyPlayer.currentTime = message.time;
+  }
+}
+
+function showPartyReaction(react) {
+  showToast(`Party reaction: ${react}`);
+}
+
+// ===== NOTES FUNCTIONS =====
+function toggleNotes() {
+  const panel = document.getElementById('notesPanel');
+  const isVisible = panel.style.display === 'block';
+  panel.style.display = isVisible ? 'none' : 'block';
+}
+
+function addNote() {
+  const input = document.getElementById('noteInput');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const note = {
+    id: Date.now() + '-' + Math.random(),
+    text,
+    timestamp: Date.now()
+  };
+  
+  notes.push(note);
+  saveNotes();
+  renderNotes();
+  input.value = '';
+  
+  sendMessage({ type: 'note', action: 'add', note });
+}
+
+function deleteNote(id) {
+  notes = notes.filter(n => n.id !== id);
+  saveNotes();
+  renderNotes();
+  sendMessage({ type: 'note', action: 'delete', id });
+}
+
+function renderNotes() {
+  const list = document.getElementById('notesList');
+  list.innerHTML = '';
+  
+  notes.forEach(note => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span>${note.text}</span>
+      <button onclick="deleteNote('${note.id}')">Delete</button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function saveNotes() {
+  localStorage.setItem('sharedNotes', JSON.stringify(notes));
+}
+
+function loadNotes() {
+  const saved = localStorage.getItem('sharedNotes');
+  if (saved) {
+    notes = JSON.parse(saved);
+    renderNotes();
+  }
+}
+
+function exportNotes() {
+  const text = notes.map(n => n.text).join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'shared-notes.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Notes exported');
+}
+
+function handleNoteMessage(message) {
+  if (message.action === 'add') {
+    notes.push(message.note);
+    saveNotes();
+    renderNotes();
+  } else if (message.action === 'delete') {
+    notes = notes.filter(n => n.id !== message.id);
+    saveNotes();
+    renderNotes();
+  }
+}
+
+// ===== MOTION DETECTION & PORTAL FUNCTIONS =====
+function initMotionDetection() {
+  motionCanvas = document.createElement('canvas');
+  motionCtx = motionCanvas.getContext('2d', { willReadFrequently: true });
+}
+
+function togglePortalFeature() {
+  portalEnabled = !portalEnabled;
+  motionDetectionEnabled = portalEnabled;
+  togglePortalBtn.classList.toggle('active', portalEnabled);
+  
+  if (portalEnabled) {
+    startMotionDetection();
+    showToast('Portal effect enabled - Wave together!');
+  } else {
+    stopMotionDetection();
+    showToast('Portal effect disabled');
+  }
+}
+
+function startMotionDetection() {
+  if (motionDetectionInterval) return;
+  
+  motionDetectionInterval = setInterval(() => {
+    detectMotion();
+  }, 200); // Check every 200ms
+}
+
+function stopMotionDetection() {
+  if (motionDetectionInterval) {
+    clearInterval(motionDetectionInterval);
+    motionDetectionInterval = null;
+  }
+}
+
+function detectMotion() {
+  if (!motionDetectionEnabled || !localVideo || !localVideo.videoWidth) return;
+  
+  // Set canvas size to match video
+  if (motionCanvas.width !== localVideo.videoWidth) {
+    motionCanvas.width = localVideo.videoWidth;
+    motionCanvas.height = localVideo.videoHeight;
+  }
+  
+  // Draw current frame
+  motionCtx.drawImage(localVideo, 0, 0, motionCanvas.width, motionCanvas.height);
+  const currentFrame = motionCtx.getImageData(0, 0, motionCanvas.width, motionCanvas.height);
+  
+  if (previousFrame) {
+    // Calculate motion by comparing frames
+    let motionPixels = 0;
+    const threshold = 30; // Sensitivity threshold
+    const data = currentFrame.data;
+    const prevData = previousFrame.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      const diff = Math.abs(data[i] - prevData[i]) + 
+                   Math.abs(data[i + 1] - prevData[i + 1]) + 
+                   Math.abs(data[i + 2] - prevData[i + 2]);
+      
+      if (diff > threshold) {
+        motionPixels++;
+      }
+    }
+    
+    // Calculate motion percentage
+    const totalPixels = motionCanvas.width * motionCanvas.height;
+    const motionPercentage = (motionPixels / totalPixels) * 100;
+    
+    // Detect significant motion (wave)
+    if (motionPercentage > 2) { // 2% of pixels changed
+      const now = Date.now();
+      
+      // Rate limit motion events to once per second
+      if (now - lastMotionTime > 1000) {
+        lastMotionTime = now;
+        sendMessage({ type: 'portalSync', ts: now });
+        checkPortalSync(now);
+      }
+    }
+  }
+  
+  // Store current frame for next comparison
+  previousFrame = motionCtx.getImageData(0, 0, motionCanvas.width, motionCanvas.height);
+}
+
+function handlePortalSync(message) {
+  remoteMotionTime = message.ts;
+  checkPortalSync(lastMotionTime);
+}
+
+function checkPortalSync(myTime) {
+  if (!portalEnabled || !remoteMotionTime || !myTime) return;
+  
+  const timeDiff = Math.abs(myTime - remoteMotionTime);
+  const now = Date.now();
+  
+  // Check if both waved within sync window and cooldown period has passed
+  if (timeDiff <= WAVE_SYNC_WINDOW && (now - lastPortalTime) > PORTAL_COOLDOWN) {
+    lastPortalTime = now;
+    triggerPortalEffect();
+    showToast('Portal activated! 🌀✨');
+  }
+}
+
+function triggerPortalEffect() {
+  // Create portal effect on both video wrappers
+  createPortalOnVideo('.local-video-wrapper');
+  createPortalOnVideo('.remote-video-wrapper');
+}
+
+function createPortalOnVideo(selector) {
+  const wrapper = document.querySelector(selector);
+  if (!wrapper) return;
+  
+  const portal = document.createElement('div');
+  portal.className = 'portal-effect';
+  wrapper.appendChild(portal);
+  
+  // Create portal ring
+  const ring = document.createElement('div');
+  ring.className = 'portal-ring';
+  portal.appendChild(ring);
+  
+  // Create particles
+  for (let i = 0; i < 20; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'portal-particle';
+    
+    // Random position around the circle
+    const angle = (Math.PI * 2 * i) / 20;
+    const radius = 45; // percentage
+    particle.style.left = `${50 + radius * Math.cos(angle)}%`;
+    particle.style.top = `${50 + radius * Math.sin(angle)}%`;
+    
+    // Random animation delay
+    particle.style.animationDelay = `${Math.random() * 0.3}s`;
+    
+    portal.appendChild(particle);
+  }
+  
+  // Remove portal after animation
+  setTimeout(() => {
+    portal.remove();
+  }, 1600);
+}
+
+// ===== COMPLIMENT FUNCTIONS =====
+function showCompliment() {
+  const banner = document.getElementById('complimentBanner');
+  const compliment = compliments[Math.floor(Math.random() * compliments.length)];
+  banner.textContent = compliment;
+  banner.classList.add('active');
+  
+  setTimeout(() => {
+    banner.classList.remove('active');
+  }, 3500);
+}
+
 // ===== SETUP EVENT LISTENERS =====
 function setupEventListeners() {
   toggleMicBtn.addEventListener('click', toggleMicrophone);
   toggleCameraBtn.addEventListener('click', toggleCamera);
   switchCameraBtn.addEventListener('click', switchCamera);
   endCallBtn.addEventListener('click', endCall);
+  
+  // Drawing controls
+  toggleDrawBtn.addEventListener('click', toggleDrawing);
+  clearDrawBtn.addEventListener('click', clearDrawing);
+  
+  // Mood lighting
+  toggleMoodLightingBtn.addEventListener('click', toggleMoodLighting);
+  
+  // Games
+  gamesBtn.addEventListener('click', openGamesModal);
+  document.getElementById('closeGames').addEventListener('click', closeGamesModal);
+  document.querySelectorAll('.game-btn').forEach(btn => {
+    btn.addEventListener('click', () => startGame(btn.dataset.game));
+  });
+  
+  // Reactions
+  reactionsBtn.addEventListener('click', toggleReactionsMenu);
+  document.querySelectorAll('.reaction-option').forEach(btn => {
+    btn.addEventListener('click', () => sendReaction(btn.dataset.reaction));
+  });
+  
+  // Watch party
+  watchPartyBtn.addEventListener('click', toggleWatchParty);
+  document.getElementById('closeWatchParty').addEventListener('click', () => {
+    document.getElementById('watchPartyPanel').style.display = 'none';
+  });
+  document.getElementById('loadVideo').addEventListener('click', loadPartyVideo);
+  document.getElementById('playPauseVideo').addEventListener('click', togglePartyPlayPause);
+  
+  // Notes
+  notesBtn.addEventListener('click', toggleNotes);
+  document.getElementById('closeNotes').addEventListener('click', () => {
+    document.getElementById('notesPanel').style.display = 'none';
+  });
+  document.getElementById('addNote').addEventListener('click', addNote);
+  document.getElementById('noteInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addNote();
+  });
+  document.getElementById('exportNotes').addEventListener('click', exportNotes);
+  
+  // Portal effect
+  if (togglePortalBtn) {
+    togglePortalBtn.addEventListener('click', togglePortalFeature);
+  }
+  
+  // Make deleteNote global
+  window.deleteNote = deleteNote;
 
   sendPulseBtn.addEventListener('mousedown', () => {
     if (isPulsing) return;
@@ -701,6 +1538,11 @@ function setupEventListeners() {
       autoHideControls();
     });
   }
+  
+  // Show compliment on 30 minute milestone
+  setTimeout(() => {
+    if (complimentsEnabled) showCompliment();
+  }, 30 * 60 * 1000);
   
   window.addEventListener('beforeunload', () => {
     if (localStream) localStream.getTracks().forEach(track => track.stop());

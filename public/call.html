@@ -33,7 +33,7 @@
     
     <!-- Remote video (Elssy's or Kay's depending on role) -->
     <div class="video-wrapper remote-video-wrapper">
-      <video id="remoteVideo" autoplay playsinline></video>
+      <video id="remoteVideo" autoplay playsinline disablepictureinpicture controlslist="nodownload noplaybackrate"></video>
       <div class="avatar-circle" id="remoteAvatar">E</div>
       <div class="video-label" id="remoteLabel">Waiting...</div>
       <div class="video-placeholder" id="remotePlaceholder">
@@ -44,11 +44,14 @@
 
     <!-- Local video (your camera) -->
     <div class="video-wrapper local-video-wrapper">
-      <video id="localVideo" autoplay muted playsinline></video>
+      <video id="localVideo" autoplay muted playsinline disablepictureinpicture controlslist="nodownload noplaybackrate"></video>
       <div class="avatar-circle" id="localAvatar">K</div>
       <div class="video-label" id="localLabel">You</div>
     </div>
   </div>
+
+  <!-- Drawing Canvas -->
+  <canvas id="drawCanvas"></canvas>
 
   <!-- Call controls -->
   <div class="controls-container">
@@ -68,10 +71,109 @@
       <span class="control-icon">💜</span>
     </button>
 
+    <button class="control-btn" id="toggleDraw" title="Toggle Drawing">
+      <span class="control-icon">✏️</span>
+    </button>
+
+    <button class="control-btn" id="clearDraw" title="Clear Drawing" style="display: none;">
+      <span class="control-icon">🗑️</span>
+    </button>
+
+    <button class="control-btn" id="toggleMoodLighting" title="Mood Lighting">
+      <span class="control-icon">🌈</span>
+    </button>
+
+    <button class="control-btn" id="gamesBtn" title="Games">
+      <span class="control-icon">🎮</span>
+    </button>
+
+    <button class="control-btn" id="reactionsBtn" title="Send Reaction">
+      <span class="control-icon">❤️</span>
+    </button>
+
+    <button class="control-btn" id="watchPartyBtn" title="Watch Party">
+      <span class="control-icon">🎬</span>
+    </button>
+
+    <button class="control-btn" id="notesBtn" title="Notes">
+      <span class="control-icon">📝</span>
+    </button>
+
+    <button class="control-btn" id="togglePortal" title="Portal Effect">
+      <span class="control-icon">🌀</span>
+    </button>
+
     <button class="control-btn end-call-btn" id="endCall" title="End Call">
       <span class="control-icon">📵</span>
     </button>
   </div>
+
+  <!-- Reaction Particles Container -->
+  <div id="reactionParticles"></div>
+
+  <!-- Games Modal -->
+  <div id="gamesModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Mini Games</h2>
+        <button class="modal-close" id="closeGames">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="games-menu">
+          <button class="game-btn" data-game="rps">🪨 Rock Paper Scissors</button>
+          <button class="game-btn" data-game="emoji">😊 Emoji Race</button>
+          <button class="game-btn" data-game="memory">🃏 Memory Flip</button>
+        </div>
+        <div id="gameArea" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reactions Menu -->
+  <div id="reactionsMenu" class="reactions-menu" style="display: none;">
+    <button class="reaction-option" data-reaction="heart">❤️</button>
+    <button class="reaction-option" data-reaction="star">⭐</button>
+    <button class="reaction-option" data-reaction="sparkle">✨</button>
+    <button class="reaction-option" data-reaction="clap">👏</button>
+  </div>
+
+  <!-- Watch Party Panel -->
+  <div id="watchPartyPanel" class="watch-party-panel" style="display: none;">
+    <div class="panel-header">
+      <h3>Watch Party</h3>
+      <button class="panel-close" id="closeWatchParty">×</button>
+    </div>
+    <div class="panel-body">
+      <input type="text" id="watchUrl" placeholder="Enter video URL (MP4 or YouTube)" />
+      <div class="panel-controls">
+        <button id="loadVideo">Load</button>
+        <button id="playPauseVideo" disabled>Play</button>
+      </div>
+      <video id="partyPlayer" controls crossorigin style="width: 100%; margin-top: 10px; display: none;"></video>
+      <div id="youtubePlayer" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- Notes Panel -->
+  <div id="notesPanel" class="notes-panel" style="display: none;">
+    <div class="panel-header">
+      <h3>Shared Notes</h3>
+      <button class="panel-close" id="closeNotes">×</button>
+    </div>
+    <div class="panel-body">
+      <div class="notes-input-container">
+        <input type="text" id="noteInput" placeholder="Add a note (120 chars max)" maxlength="120" />
+        <button id="addNote">Add</button>
+      </div>
+      <ul id="notesList"></ul>
+      <div class="notes-actions">
+        <button id="exportNotes">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compliment Banner -->
+  <div id="complimentBanner" class="compliment-banner"></div>
 
   <!-- Background gradient -->
   <div class="gradient-bg"></div>
