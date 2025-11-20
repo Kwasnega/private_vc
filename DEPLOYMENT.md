@@ -82,7 +82,7 @@ Once deployed:
 1. **Open the URL on both phones** (or phone + computer)
 2. **Allow camera/microphone permissions**
 3. **One person clicks "Start Call"** (Kay)
-4. **Other person clicks "Join Call"** (Elssy)
+4. **Other person clicks "Join Call"** (Cathy)
 5. **You should see each other!** 💜
 
 ### Important Notes:

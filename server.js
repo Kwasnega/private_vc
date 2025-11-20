@@ -1,4 +1,4 @@
-// Simple WebSocket signaling server for Kay & Elssy's private video calls
+// Simple WebSocket signaling server for Kay & Cathy's private video calls
 // This server just relays WebRTC signaling messages between two peers
 
 const WebSocket = require('ws');
@@ -45,7 +45,7 @@ const server = http.createServer((req, res) => {
 // Create WebSocket server
 const wss = new WebSocket.Server({ server });
 
-// Store connected clients (max 2: Kay and Elssy)
+// Store connected clients (max 2: Kay and Cathy)
 let clients = [];
 
 wss.on('connection', (ws) => {
@@ -115,7 +115,7 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
-  console.log(`🎥 Kay & Elssy's Private Call Server running on port ${PORT}`);
+  console.log(`🎥 Kay & Cathy's Private Call Server running on port ${PORT}`);
   console.log(`💜 Waiting for connections...`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

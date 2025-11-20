@@ -1,7 +1,7 @@
 {
-  "name": "kay-elssy-private-call",
+  "name": "kay-cathy-private-call",
   "version": "1.0.0",
-  "description": "Private video calling website for Kay & Elssy",
+  "description": "Private video calling website for Kay & Cathy",
   "main": "server.js",
   "type": "commonjs",
   "engines": {

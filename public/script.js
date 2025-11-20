@@ -1,4 +1,4 @@
-// WebRTC Video Call Script for Kay & Elssy
+// WebRTC Video Call Script for Kay & Cathy
 // This handles all the video calling logic using pure WebRTC
 
 // ===== CONFIGURATION =====
@@ -108,13 +108,13 @@ async function init() {
 
   if (role === 'caller') {
     localLabel.textContent = 'Kay';
-    remoteLabel.textContent = 'Elssy';
+    remoteLabel.textContent = 'Cathy';
     localAvatar.textContent = 'K';
-    remoteAvatar.textContent = 'E';
+    remoteAvatar.textContent = 'C';
   } else {
-    localLabel.textContent = 'Elssy';
+    localLabel.textContent = 'Cathy';
     remoteLabel.textContent = 'Kay';
-    localAvatar.textContent = 'E';
+    localAvatar.textContent = 'C';
     remoteAvatar.textContent = 'K';
   }
 
@@ -380,7 +380,7 @@ function createPeerConnection() {
     switch (peerConnection.iceConnectionState) {
       case 'connected':
       case 'completed':
-        updateConnectionStatus(`Connected to ${role === 'caller' ? 'Elssy' : 'Kay'} ❤️`, 'connected');
+        updateConnectionStatus(`Connected to ${role === 'caller' ? 'Cathy' : 'Kay'} ❤️`, 'connected');
         console.log('✅ ICE connection established!');
         break;
       case 'disconnected':
@@ -620,10 +620,17 @@ async function switchCamera() {
 
 // ===== END CALL =====
 function endCall() {
-  if (localStream) localStream.getTracks().forEach(track => track.stop());
-  if (peerConnection) peerConnection.close();
-  if (ws) ws.close();
-  window.location.href = 'index.html';
+  // Show goodbye message
+  const partnerName = role === 'caller' ? 'Cathy' : 'Kay';
+  showToast(`Bye ${partnerName}, talk to you laterrr 💜`);
+  
+  // Wait a moment for the toast to show, then end call
+  setTimeout(() => {
+    if (localStream) localStream.getTracks().forEach(track => track.stop());
+    if (peerConnection) peerConnection.close();
+    if (ws) ws.close();
+    window.location.href = 'index.html';
+  }, 2000);
 }
 
 // ===== UPDATE CONNECTION STATUS =====
@@ -1088,20 +1095,99 @@ function loadPartyVideo() {
   const url = document.getElementById('watchUrl').value.trim();
   if (!url) return;
   
-  partyPlayer = document.getElementById('partyPlayer');
   const playPauseBtn = document.getElementById('playPauseVideo');
   
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
-    showToast('YouTube support coming soon! Use MP4 URLs for now.');
+    // Extract YouTube video ID
+    let videoId = '';
+    if (url.includes('youtube.com/watch?v=')) {
+      videoId = url.split('v=')[1].split('&')[0];
+    } else if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0];
+    }
+    
+    if (videoId) {
+      loadYouTubeVideo(videoId);
+      playPauseBtn.disabled = false;
+      sendMessage({ type: 'partyLoad', url, duration: 0, isYouTube: true, videoId });
+      showToast('YouTube video loaded');
+    } else {
+      showToast('Invalid YouTube URL');
+    }
     return;
   }
   
+  // Regular MP4 video
+  partyPlayer = document.getElementById('partyPlayer');
   partyPlayer.src = url;
   partyPlayer.style.display = 'block';
+  document.getElementById('youtubePlayer').style.display = 'none';
   playPauseBtn.disabled = false;
   
-  sendMessage({ type: 'partyLoad', url, duration: 0 });
+  sendMessage({ type: 'partyLoad', url, duration: 0, isYouTube: false });
   showToast('Video loaded');
+}
+
+function loadYouTubeVideo(videoId) {
+  const youtubeContainer = document.getElementById('youtubePlayer');
+  const mp4Player = document.getElementById('partyPlayer');
+  
+  mp4Player.style.display = 'none';
+  youtubeContainer.style.display = 'block';
+  
+  // Create YouTube iframe
+  youtubeContainer.innerHTML = `
+    <iframe id="ytPlayer" width="100%" height="315" 
+      src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}" 
+      frameborder="0" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allowfullscreen>
+    </iframe>
+  `;
+  
+  // Initialize YouTube player API if not already loaded
+  if (!window.YT) {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+  }
+}
+
+function togglePartyPlayPause() {
+  if (!partyPlayer && !document.getElementById('ytPlayer')) return;
+  
+  const youtubePlayer = document.getElementById('ytPlayer');
+  
+  if (youtubePlayer && youtubePlayer.style.display !== 'none') {
+    // YouTube player control via postMessage
+    const iframe = youtubePlayer;
+    const playPauseBtn = document.getElementById('playPauseVideo');
+    
+    if (playPauseBtn.textContent === 'Play') {
+      iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+      playPauseBtn.textContent = 'Pause';
+      sendMessage({ type: 'partyControl', action: 'play', time: 0, isYouTube: true });
+    } else {
+      iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      playPauseBtn.textContent = 'Play';
+      sendMessage({ type: 'partyControl', action: 'pause', time: 0, isYouTube: true });
+    }
+    return;
+  }
+  
+  // Regular MP4 player
+  if (!partyPlayer) return;
+  
+  if (partyPlayer.paused) {
+    partyPlayer.play();
+    sendMessage({ type: 'partyControl', action: 'play', time: partyPlayer.currentTime, isYouTube: false });
+    document.getElementById('playPauseVideo').textContent = 'Pause';
+  } else {
+    partyPlayer.pause();
+    sendMessage({ type: 'partyControl', action: 'pause', time: partyPlayer.currentTime, isYouTube: false });
+    document.getElementById('playPauseVideo').textContent = 'Play';
+  }
 }
 
 function togglePartyPlayPause() {
@@ -1119,25 +1205,45 @@ function togglePartyPlayPause() {
 }
 
 function handlePartyLoad(message) {
-  partyPlayer = document.getElementById('partyPlayer');
-  partyPlayer.src = message.url;
-  partyPlayer.style.display = 'block';
-  document.getElementById('playPauseVideo').disabled = false;
-  showToast('Video loaded by peer');
+  if (message.isYouTube && message.videoId) {
+    loadYouTubeVideo(message.videoId);
+    document.getElementById('playPauseVideo').disabled = false;
+    showToast('YouTube video loaded by peer');
+  } else {
+    partyPlayer = document.getElementById('partyPlayer');
+    partyPlayer.src = message.url;
+    partyPlayer.style.display = 'block';
+    document.getElementById('youtubePlayer').style.display = 'none';
+    document.getElementById('playPauseVideo').disabled = false;
+    showToast('Video loaded by peer');
+  }
 }
 
 function handlePartyControl(message) {
-  if (!partyPlayer) return;
-  
-  if (message.action === 'play') {
-    partyPlayer.currentTime = message.time;
-    partyPlayer.play();
-    document.getElementById('playPauseVideo').textContent = 'Pause';
-  } else if (message.action === 'pause') {
-    partyPlayer.pause();
-    document.getElementById('playPauseVideo').textContent = 'Play';
-  } else if (message.action === 'seek') {
-    partyPlayer.currentTime = message.time;
+  if (message.isYouTube) {
+    const iframe = document.getElementById('ytPlayer');
+    if (!iframe) return;
+    
+    if (message.action === 'play') {
+      iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+      document.getElementById('playPauseVideo').textContent = 'Pause';
+    } else if (message.action === 'pause') {
+      iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      document.getElementById('playPauseVideo').textContent = 'Play';
+    }
+  } else {
+    if (!partyPlayer) return;
+    
+    if (message.action === 'play') {
+      partyPlayer.currentTime = message.time;
+      partyPlayer.play();
+      document.getElementById('playPauseVideo').textContent = 'Pause';
+    } else if (message.action === 'pause') {
+      partyPlayer.pause();
+      document.getElementById('playPauseVideo').textContent = 'Play';
+    } else if (message.action === 'seek') {
+      partyPlayer.currentTime = message.time;
+    }
   }
 }
 

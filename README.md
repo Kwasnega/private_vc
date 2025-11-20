@@ -1,6 +1,6 @@
-# 💜 Kay & Elssy — Private Video Call
+# 💜 Kay & Cathy — Private Video Call
 
-A beautiful, private web-based video calling website built with pure WebRTC for Kay and Elssy.
+A beautiful, private web-based video calling website built with pure WebRTC for Kay and Cathy.
 
 ## ✨ Features
 
@@ -50,9 +50,9 @@ http://localhost:3000
 1. Open `http://localhost:3000`
 2. Click **"Start Call"**
 3. Allow camera and microphone permissions
-4. Wait for Elssy to join
+4. Wait for Cathy to join
 
-### For Elssy (Receiver):
+### For Cathy (Receiver):
 1. Open `http://localhost:3000`
 2. Click **"Join Call"**
 3. Allow camera and microphone permissions
@@ -127,7 +127,7 @@ Update labels in `public/script.js` in the `init()` function
 
 ## 💖 Made with Love
 
-A special private space for Kay & Elssy's conversations.
+A special private space for Kay & Cathy's conversations.
 
 ---
 
